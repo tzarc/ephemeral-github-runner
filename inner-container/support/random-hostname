@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+setup_hostname() {
+    local new_hostname="runner-$(head -n1 < <(fold -w8 < <(tr -cd 'a-z0-9' < /dev/urandom)))"
+    hostnamectl set-hostname "$new_hostname"
+    sed -i "2 s/^.*$/127.0.1.1 $new_hostname/g" /etc/hosts
+}
+
+setup_hostname
