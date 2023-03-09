@@ -1,0 +1,32 @@
+name: Build and push Docker image
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-and-push-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set version
+        uses: actions/github-script@v6
+        id: set-version
+        with:
+          result-encoding: string
+          script: return context.payload.release.tag_name.replace('v', '')
+
+      - name: Build and push
+        run: |
+          make container
+          docker tag github-runner-vm:latest ghcr.io/${{ github.repository_owner }}/ephemeral-github-runner:${{ steps.set-version.outputs.result }}
+          docker push ghcr.io/${{ github.repository_owner }}/my-image:${{ steps.set-version.outputs.result }}
