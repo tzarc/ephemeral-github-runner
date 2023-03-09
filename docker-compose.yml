@@ -1,4 +1,5 @@
 networks:
+  # Here we override the subnets in the hope that the internal QEMU VM's docker doesn't reassign the same ranges by default
   backplane:
     internal: true
     ipam:
@@ -7,6 +8,10 @@ networks:
         - subnet: "10.252.252.0/24"
   frontend:
     internal: false
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.253.253.0/24"
 
 services:
   squid:
