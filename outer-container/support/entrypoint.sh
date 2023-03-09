@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# Exit on errors
-set -xeEuo pipefail
+set -x
 
 # Extract the disk image
-xz -d /disk-image.qcow2.xz
+xz -dk /disk-image.qcow2.xz
 
 # Work out the args to pass to qemu
 config_entries=()
