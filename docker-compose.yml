@@ -1,6 +1,10 @@
 networks:
   backplane:
     internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.252.252.0/24"
   frontend:
     internal: false
 
