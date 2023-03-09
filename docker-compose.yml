@@ -25,8 +25,8 @@ services:
     depends_on:
       - squid
     environment:
-      - "NUM_CPUS=2"
-      - "MEMORY_ALLOC=4096"
+      - "NUM_CPUS=${NUM_CPUS:-2}"
+      - "MEMORY_ALLOC=${MEMORY_ALLOC:-4096}"
       - "GITHUB_REPOSITORY=${GITHUB_REPOSITORY?Variable not set}" # should be in the format "owner/repo"
       - "GITHUB_TOKEN=${GITHUB_TOKEN?Variable not set}" # Should be a fine-grained personal access token with "administration" permission on the repository above
       - "http_proxy=http://squid:3128" # Point at the squid instance above so that it has external access to the allowed domains
@@ -40,7 +40,7 @@ services:
     networks:
       - frontend
     environment:
-      - "NUM_CPUS=2"
-      - "MEMORY_ALLOC=4096"
+      - "NUM_CPUS=${NUM_CPUS:-2}"
+      - "MEMORY_ALLOC=${MEMORY_ALLOC:-4096}"
       - "GITHUB_REPOSITORY=${GITHUB_REPOSITORY?Variable not set}" # should be in the format "owner/repo"
       - "GITHUB_TOKEN=${GITHUB_TOKEN?Variable not set}" # Should be a fine-grained personal access token with "administration" permission on the repository above
