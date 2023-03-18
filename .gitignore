@@ -1,3 +1,4 @@
 bin
 *.qcow2
 *.qcow2.xz
+docker-compose-internal.yml

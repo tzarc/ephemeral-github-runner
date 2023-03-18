@@ -2,8 +2,12 @@
 
 set -x
 
+# Set up directories
+[ -d /base ] || mkdir /base
+[ -d /work ] || mkdir /work
+
 # Extract the disk image
-xz -dk /disk-image.qcow2.xz
+xz -dc disk-image.qcow2.xz > /base/disk-image.qcow2
 
 # Work out the args to pass to qemu
 config_entries=()
@@ -23,10 +27,10 @@ mkdir -p /tmp/fw_cfg
 while true ; do
 
     # Delete any pre-existing snapshot
-    [ ! -f /disk-image-snap.qcow2 ] || rm /disk-image-snap.qcow2
+    [ ! -f /work/disk-image-snap.qcow2 ] || rm /work/disk-image-snap.qcow2
 
     # Create a new snapshot
-    qemu-img create -f qcow2 -b /disk-image.qcow2 -F qcow2 /disk-image-snap.qcow2
+    qemu-img create -f qcow2 -b /base/disk-image.qcow2 -F qcow2 /work/disk-image-snap.qcow2
 
     # Create a registration token
     gh api --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "repos/${GITHUB_REPOSITORY}/actions/runners/registration-token" --jq '.token' > /tmp/fw_cfg/REGISTRATION_TOKEN
@@ -39,8 +43,8 @@ while true ; do
         -object rng-random,id=rng0,filename=/dev/urandom \
         -device virtio-balloon-pci,id=balloon0,deflate-on-oom=on \
         -device virtio-rng-pci,rng=rng0 \
-        -drive file=/disk-image-snap.qcow2,index=0,media=disk \
-        -device virtio-net-pci,netdev=t0,mac=ae:3a:04:d8:e0:e2 \
+        -drive file=/work/disk-image-snap.qcow2,index=0,media=disk \
+        -device virtio-net-pci,netdev=t0 \
         -netdev user,id=t0 \
         -nographic \
         ${config_entries[@]} \
