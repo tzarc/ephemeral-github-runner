@@ -36,7 +36,7 @@ while true ; do
     gh api --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "repos/${GITHUB_REPOSITORY}/actions/runners/registration-token" --jq '.token' > /tmp/fw_cfg/REGISTRATION_TOKEN
 
     # Start the VM
-    qemu-system-x86_64 -smp $NUM_CPUS -m $MEMORY_ALLOC \
+    nice -n19 qemu-system-x86_64 -smp $NUM_CPUS -m $MEMORY_ALLOC \
         -enable-kvm \
         -machine q35,accel=kvm:tcg \
         -cpu host \
