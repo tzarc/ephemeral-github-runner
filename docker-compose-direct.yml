@@ -1,0 +1,29 @@
+networks:
+  # Here we override the subnets in the hope that the internal QEMU VM's docker doesn't reassign the same ranges by default
+  backplane:
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.252.252.0/24"
+  frontend:
+    internal: false
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.253.253.0/24"
+
+services:
+  runner:
+    image: github-runner-vm:latest
+    restart: always
+    devices:
+      - "/dev/kvm:/dev/kvm"
+    networks:
+      - frontend
+    environment:
+      - "NUM_CPUS=${NUM_CPUS:-2}"
+      - "MEMORY_ALLOC=${MEMORY_ALLOC:-4096}"
+      - "NICE_VAL=19"
+      - "GITHUB_REPOSITORY=${GITHUB_REPOSITORY?Variable not set}" # should be in the format "owner/repo"
+      - "GITHUB_TOKEN=${GITHUB_TOKEN?Variable not set}" # Should be a fine-grained personal access token with "administration" permission on the repository above

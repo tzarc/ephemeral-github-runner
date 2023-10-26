@@ -24,6 +24,11 @@ mkdir -p /tmp/fw_cfg
 # Optional command to execute, if we want to skip the runner
 [[ -z "${EXEC_COMMAND:-}" ]] || { echo "${EXEC_COMMAND}" > /tmp/fw_cfg/EXEC_COMMAND ; config_entries+=("-fw_cfg name=opt/runner/EXEC_COMMAND,file=/tmp/fw_cfg/EXEC_COMMAND") ; }
 
+# Work out if we want to run nice
+if [[ ${NICE_VAL:-0} -ne 0 ]] ; then
+    NICE_CMD="nice -n${NICE_VAL:-0}"
+fi
+
 while true ; do
 
     # Delete any pre-existing snapshot
@@ -36,7 +41,7 @@ while true ; do
     gh api --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "repos/${GITHUB_REPOSITORY}/actions/runners/registration-token" --jq '.token' > /tmp/fw_cfg/REGISTRATION_TOKEN
 
     # Start the VM
-    nice -n19 qemu-system-x86_64 -smp $NUM_CPUS -m $MEMORY_ALLOC \
+    ${NICE_CMD:-} qemu-system-x86_64 -smp $NUM_CPUS -m $MEMORY_ALLOC \
         -enable-kvm \
         -machine q35,accel=kvm:tcg \
         -cpu host \
