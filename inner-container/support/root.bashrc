@@ -21,6 +21,9 @@ EXEC_COMMAND=$(import_var EXEC_COMMAND)
 REGISTRATION_TOKEN=$(import_var REGISTRATION_TOKEN)
 GITHUB_REPOSITORY=$(import_var GITHUB_REPOSITORY)
 
+# Arch
+RUNNER_ARCH=$(import_var RUNNER_ARCH)
+
 # Set up proxy information
 export http_proxy=$(import_var http_proxy)
 export https_proxy=$(import_var https_proxy)
@@ -49,7 +52,7 @@ fi
 
 # Download the latest runner binary, so that we're on the latest version
 latest_version=$(git ls-remote --tags https://github.com/actions/runner | cut -d'/' -f 3 | tail -n 1)
-curl -L -o runner.tgz https://github.com/actions/runner/releases/download/$latest_version/actions-runner-linux-x64-$(echo $latest_version | sed -e 's@^v@@g').tar.gz
+curl -L -o runner.tgz https://github.com/actions/runner/releases/download/$latest_version/actions-runner-linux-${RUNNER_ARCH:-x64}-$(echo $latest_version | sed -e 's@^v@@g').tar.gz
 tar xzf runner.tgz -C /actions-runner
 chown -R github:github /actions-runner
 

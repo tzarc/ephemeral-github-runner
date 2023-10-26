@@ -24,6 +24,9 @@ mkdir -p /tmp/fw_cfg
 # Optional command to execute, if we want to skip the runner
 [[ -z "${EXEC_COMMAND:-}" ]] || { echo "${EXEC_COMMAND}" > /tmp/fw_cfg/EXEC_COMMAND ; config_entries+=("-fw_cfg name=opt/runner/EXEC_COMMAND,file=/tmp/fw_cfg/EXEC_COMMAND") ; }
 
+# Optional runner architecture -- x64, arm64, arm
+[[ -z "${RUNNER_ARCH:-}" ]] || { echo "${RUNNER_ARCH}" > /tmp/fw_cfg/RUNNER_ARCH ; config_entries+=("-fw_cfg name=opt/runner/RUNNER_ARCH,file=/tmp/fw_cfg/RUNNER_ARCH") ; }
+
 # Work out if we want to run nice
 if [[ ${NICE_VAL:-0} -ne 0 ]] ; then
     NICE_CMD="nice -n${NICE_VAL:-0}"
