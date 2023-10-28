@@ -40,13 +40,12 @@ echo '[Service]' >/etc/systemd/system/docker.service.d/http-proxy.conf
 systemctl daemon-reload
 systemctl restart docker
 
-# Work out the directory we're starting from, as well as the command we're executing
+# Work out the command we're executing
+target_dir=/home/runner
 if [[ ! -z "${EXEC_COMMAND:-}" ]]; then
-    target_dir=/home/runner
     EXEC_COMMAND="${EXEC_COMMAND#exec }" # Strip leading 'exec ', if any
     EXEC_COMMAND="exec $EXEC_COMMAND"    # Prepend an 'exec '
 else
-    target_dir=/home/runner/bin
     EXEC_COMMAND="./config.sh --url https://github.com/${GITHUB_REPOSITORY} --token ${REGISTRATION_TOKEN} --ephemeral --unattended || true; exec ./run.sh"
 fi
 
