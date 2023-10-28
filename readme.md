@@ -1,4 +1,4 @@
-# An attempted "proper" ephemeral GitHub self-hosted runner
+# A "proper" ephemeral GitHub self-hosted runner
 
 GitHub allows for self-hosted runners to be deployed, however one of the drawbacks has been the fact that after a build there is the potential for leftovers to be present.
 
@@ -6,27 +6,19 @@ This recipe wraps the GitHub `actions/runner` into a container that launches the
 This VM is then repeatedly launched in a loop, so that each job is executed on a brand new VM instance.
 Internally, the VM downloads a copy of the `actions/runner` binaries on startup, registers itself as an ephemeral self-hosted runner, and waits for a job.
 
-This was hacked together in a couple of afternoons, so be prepared for things to fail.
-
 Organisation-level runners are not yet supported.
 
-## Building the container
+## docker compose
+
+There is a [docker-compose-direct.yml](docker-compose-direct.yml) which shows how to configure and run the runner VM in "direct" mode, which has unrestricted network access.
+
+There is a [docker-compose-proxied.yml](docker-compose-proxied.yml) which shows how to configure and run the runner VM in "proxied" mode which funnels external traffic through a preconfigured _squid_ proxy container, limiting the domains the runner has access to.
+
+## GitHub Actions Runner Container
 
 ```sh
-make container
+$ docker pull ghcr.io/tzarc/ephemeral-github-runner:latest
 ```
-
-This will create a tagged container called `github-runner-vm:latest`.
-
-If you also want to build the squid container:
-
-```sh
-make squid-container
-```
-
-...which results in a tagged container called `github-runner-squid:latest`.
-
-## Running the container
 
 There are a handful of environment variables that are required in order to actually get the runner talking:
 
@@ -42,8 +34,36 @@ There are a handful of environment variables that are required in order to actua
 | `https_proxy` (optional) | `http://squid:3128`      | Proxy to use for any HTTPS requests.                                                                                         |
 | `no_proxy` (optional)    | `hostA,hostB`            | Hosts to bypass for outbound HTTP[S] requests. Not recommended to be used due to inconsistency between apps using it.        |
 
-## docker compose
+### Building the container
 
-There is a [docker-compose-direct.yml](docker-compose-direct.yml) which shows how to configure and run the runner VM in "direct" mode, which has unrestricted network access.
+```sh
+make container
+```
 
-There is a [docker-compose-proxied.yml](docker-compose-proxied.yml) which shows how to configure and run the runner VM in "proxied" mode which funnels external traffic through a preconfigured _squid_ proxy container, limiting the domains the runner has access to.
+This will create a tagged container called `github-runner-vm:latest`.
+
+## Squid Container
+
+```sh
+$ docker pull ghcr.io/tzarc/ephemeral-github-runner:latest-squid
+```
+
+This is a simple squid container that is used to proxy outbound HTTP[S] requests from the runner VM. It allows for configuration of allowed domains:
+
+| Environment Variable   | Format                        | Description                                                       |
+|------------------------|-------------------------------|-------------------------------------------------------------------|
+| `ALLOWED_DOMAINS_LIST` | `.domain-a.com .domain-b.com` | The allowed domains. Space-separated, should include leading `.`. |
+| `MEM_CACHE_SIZE`       | `1024`                        | Cache size in MB to keep resident in memory.                      |
+| `FILE_CACHE_SIZE`      | `1024`                        | Cache size in MB to keep on disk.                                 |
+| `FILE_MAX_SIZE`        | `1024`                        | The maximum size MB of any one file.                              |
+
+### Building the container
+
+If you also want to build the squid container:
+
+```sh
+make squid-container
+```
+
+...which results in a tagged container called `github-runner-squid:latest`.
+

@@ -15,8 +15,7 @@ networks:
 
 services:
   squid:
-    image: squid-container
-    build: squid-container
+    image: ghcr.io/tzarc/ephemeral-github-runner:latest-squid
     restart: always
     networks:
       - frontend
@@ -25,7 +24,7 @@ services:
       - "ALLOWED_DOMAINS_LIST=.pypi.org .pythonhosted.org .arm.com .docker.com .docker.io .github.com .githubapp.com .githubusercontent.com .blob.core.windows.net .actions.githubusercontent.com .pkg.github.com ghcr.io"
 
   runner-proxied:
-    image: github-runner-vm:latest
+    image: ghcr.io/tzarc/ephemeral-github-runner:latest
     restart: always
     devices:
       - "/dev/kvm:/dev/kvm"
@@ -37,7 +36,7 @@ services:
       - "NUM_CPUS=${NUM_CPUS:-2}"
       - "MEMORY_ALLOC=${MEMORY_ALLOC:-4096}"
       - "NICE_VAL=19"
-      - "GITHUB_REPOSITORY=${GITHUB_REPOSITORY?Variable not set}" # should be in the format "owner/repo"
-      - "GITHUB_TOKEN=${GITHUB_TOKEN?Variable not set}" # Should be a fine-grained personal access token with "administration" permission on the repository above
+      - "GITHUB_REPOSITORY=${GITHUB_REPOSITORY:?Variable not set}" # should be in the format "owner/repo"
+      - "GITHUB_TOKEN=${GITHUB_TOKEN:?Variable not set}" # Should be a fine-grained personal access token with "administration" permission on the repository above
       - "http_proxy=http://squid:3128" # Point at the squid instance above so that it has external access to the allowed domains
       - "https_proxy=http://squid:3128" # As above
