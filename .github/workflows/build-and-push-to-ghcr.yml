@@ -9,6 +9,7 @@ on:
 
 jobs:
   build-and-push-docker-image:
+    name: Build/Push Docker Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,12 +21,23 @@ jobs:
         with:
           result-encoding: string
           script: |
-            if (typeof(github.ref) !== 'undefined' && github.ref.startsWith('refs/tags/v')) {
-              return 'ghrc.io/' + context.repo.owner + '/' + context.repo.repo + ':latest' +
-                    ' ghrc.io/' + context.repo.owner + '/' + context.repo.repo + ':' + context.payload.release.tag_name.replace('v', '')
+            if (context.ref.startsWith('refs/tags/v')) {
+              return 'ghcr.io/' + context.repo.owner + '/' + context.repo.repo + ':latest' +
+                    ' ghcr.io/' + context.repo.owner + '/' + context.repo.repo + ':' + context.ref.replace('refs/tags/v', '')
             } else {
-              return 'ghrc.io/' + context.repo.owner + '/' + context.repo.repo + ':' + context.sha
+              return 'ghcr.io/' + context.repo.owner + '/' + context.repo.repo + ':' + context.sha
             }
+
+      - name: Show target tags
+        run: |
+          for tag in ${{ steps.set-container-tags.outputs.result }}; do
+            echo $tag
+          done
+
+      - name: Install prerequisites
+        run: |
+          sudo apt update \
+            && sudo apt install -y xz-utils qemu-utils
 
       - name: Build container
         run: |

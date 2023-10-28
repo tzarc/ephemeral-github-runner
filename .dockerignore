@@ -1,1 +1,4 @@
+bin
+output
 *.qcow2
+*.qcow2.xz

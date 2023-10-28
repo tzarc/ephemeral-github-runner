@@ -7,7 +7,7 @@ set -x
 [ -d /work ] || mkdir /work
 
 # Extract the disk image
-xz -dc disk-image.qcow2.xz > /base/disk-image.qcow2
+xz -dc vm-rootfs.qcow2.xz > /base/vm-rootfs.qcow2
 
 # Work out the args to pass to qemu
 config_entries=()
@@ -35,26 +35,31 @@ fi
 while true ; do
 
     # Delete any pre-existing snapshot
-    [ ! -f /work/disk-image-snap.qcow2 ] || rm /work/disk-image-snap.qcow2
+    [ ! -f /work/vm-snap.qcow2 ] || rm /work/vm-snap.qcow2
 
-    # Create a new snapshot
-    qemu-img create -f qcow2 -b /base/disk-image.qcow2 -F qcow2 /work/disk-image-snap.qcow2
+    # Create a new snapshot so we don't mess with the rootfs each time
+    qemu-img create -f qcow2 -b /base/vm-rootfs.qcow2 -F qcow2 /work/vm-snap.qcow2
 
     # Create a registration token
     gh api --method POST -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "repos/${GITHUB_REPOSITORY}/actions/runners/registration-token" --jq '.token' > /tmp/fw_cfg/REGISTRATION_TOKEN
 
     # Start the VM
-    ${NICE_CMD:-} qemu-system-x86_64 -smp $NUM_CPUS -m $MEMORY_ALLOC \
+    ${NICE_CMD:-} qemu-system-x86_64 \
+        -smp $NUM_CPUS \
+        -m $MEMORY_ALLOC \
         -enable-kvm \
         -machine q35,accel=kvm:tcg \
         -cpu host \
         -object rng-random,id=rng0,filename=/dev/urandom \
         -device virtio-balloon-pci,id=balloon0,deflate-on-oom=on \
         -device virtio-rng-pci,rng=rng0 \
-        -drive file=/work/disk-image-snap.qcow2,index=0,media=disk \
         -device virtio-net-pci,netdev=t0 \
         -netdev user,id=t0 \
         -nographic \
+        -kernel /vmlinuz \
+        -initrd /initrd \
+        -drive file=/work/vm-snap.qcow2,index=0,media=disk \
+        -append "root=/dev/sda nomodeset console=ttyS0 net.ifnames=0" \
         ${config_entries[@]} \
         -fw_cfg name=opt/runner/REGISTRATION_TOKEN,file=/tmp/fw_cfg/REGISTRATION_TOKEN
 done

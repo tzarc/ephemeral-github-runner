@@ -1,26 +1,48 @@
 .DEFAULT: all
-all: container
+all: runner-image
 
+ROOTFS_SIZE = 80G
+
+.PHONY: clean
 clean:
-	rm -rf bin *.qcow2 *.qcow2.xz
-	docker rm github-runner-vm:latest 2>/dev/null || true
+	[ ! -e output ] || rm -rf output
 
-bin/d2vm:
-	if [ ! -d bin ]; then mkdir bin; fi
-	VERSION=$$(git ls-remote --tags https://github.com/linka-cloud/d2vm | cut -d'/' -f 3 | grep -v -- '-rc' | tail -n 1) \
-		&& OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
-		&& ARCH=$$([ "$$(uname -m)" = "x86_64" ] && echo "amd64" || echo "arm64") \
-		&& curl -sL "https://github.com/linka-cloud/d2vm/releases/download/$${VERSION}/d2vm_$${VERSION}_$${OS}_$${ARCH}.tar.gz" | tar -xvz d2vm
-	mv d2vm bin/d2vm
-	chmod +x bin/d2vm
+output/vm-rootfs.tar: $(shell find vm-rootfs -type f)
+	if [ ! -d output ]; then mkdir output; fi
+	cd vm-rootfs \
+		&& docker buildx build --tag github-runner-rootfs:latest . \
+		&& docker create --name github_runner_rootfs github-runner-rootfs:latest \
+		&& docker export github_runner_rootfs -o ../output/vm-rootfs.tar \
+		&& docker rm github_runner_rootfs \
+		&& docker rmi github-runner-rootfs:latest
 
-disk-image.qcow2: Makefile bin/d2vm inner-container/Dockerfile.github-runner $(shell ls inner-container/support | xargs -I{} echo inner-container/support/{} | xargs echo)
-	[ ! -f disk-image.qcow2 ] || rm disk-image.qcow2
-	./bin/d2vm build --file inner-container/Dockerfile.github-runner --output disk-image.qcow2 --force --verbose --size 120G .
+output/vm-rootfs: output/vm-rootfs.tar $(shell find vm-builder -type f)
+	truncate -s $(ROOTFS_SIZE) output/vm-rootfs
+	cd vm-builder \
+		&& docker buildx build --tag github-runner-vm-builder:latest . \
+		&& docker run --rm --privileged -v $(shell realpath output):/vm-builder/output -e PUID=$(shell id -u) -e PGID=$(shell id -g) github-runner-vm-builder:latest \
+		&& docker rmi github-runner-vm-builder:latest
 
-disk-image.qcow2.xz: Makefile disk-image.qcow2
-	xz -zk9e -T 0 disk-image.qcow2
+output/vm-rootfs.qcow2: output/vm-rootfs
+	[ ! -f output/vm-rootfs.qcow2 ] || rm output/vm-rootfs.qcow2
+	qemu-img convert -O qcow2 output/vm-rootfs output/vm-rootfs.qcow2
 
-container: Makefile disk-image.qcow2.xz
-	docker rm github-runner-vm:latest || true
-	docker build -t github-runner-vm:latest -f outer-container/Dockerfile.runner-wrapper .
+output/vm-rootfs.qcow2.xz: output/vm-rootfs.qcow2
+	[ ! -f output/vm-rootfs.qcow2.xz ] || rm output/vm-rootfs.qcow2.xz
+	xz -zk9e -T 0 output/vm-rootfs.qcow2
+
+output/vmlinuz: output/vm-rootfs
+
+output/initrd: output/vm-rootfs
+
+.PHONY: vm-rootfs
+vm-rootfs: output/vm-rootfs.qcow2.xz output/vmlinuz output/initrd
+
+.PHONY: container
+container: vm-rootfs $(shell find runner-container -type f)
+	ls -1al output/ \
+		&& cp output/vmlinuz output/initrd output/vm-rootfs.qcow2.xz runner-container \
+		&& cd runner-container \
+		&& { docker rmi github-runner-vm:latest || true ; } \
+		&& docker buildx build --tag github-runner-vm:latest . \
+		&& rm -f vmlinuz initrd vm-rootfs.qcow2.xz
