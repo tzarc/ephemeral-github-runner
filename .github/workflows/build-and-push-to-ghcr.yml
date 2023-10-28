@@ -15,9 +15,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Determine container tag names
+      - name: Determine runner container tag names
         uses: actions/github-script@v6
-        id: set-container-tags
+        id: set-runner-tags
         with:
           result-encoding: string
           script: |
@@ -28,9 +28,27 @@ jobs:
               return 'ghcr.io/' + context.repo.owner + '/' + context.repo.repo + ':' + context.sha
             }
 
+      - name: Determine squid container tag names
+        uses: actions/github-script@v6
+        id: set-squid-tags
+        with:
+          result-encoding: string
+          script: |
+            if (context.ref.startsWith('refs/tags/v')) {
+              return 'ghcr.io/' + context.repo.owner + '/' + context.repo.repo + ':latest-squid' +
+                    ' ghcr.io/' + context.repo.owner + '/' + context.repo.repo + ':' + context.ref.replace('refs/tags/v', '') + '-squid'
+            } else {
+              return 'ghcr.io/' + context.repo.owner + '/' + context.repo.repo + ':' + context.sha + '-squid'
+            }
+
       - name: Show target tags
         run: |
-          for tag in ${{ steps.set-container-tags.outputs.result }}; do
+          echo 'Runner tags:'
+          for tag in ${{ steps.set-runner-tags.outputs.result }}; do
+            echo $tag
+          done
+          echo 'Squid tags:'
+          for tag in ${{ steps.set-squid-tags.outputs.result }}; do
             echo $tag
           done
 
@@ -39,11 +57,15 @@ jobs:
           sudo apt update \
             && sudo apt install -y xz-utils qemu-utils
 
-      - name: Build container
+      - name: Build containers
         run: |
           make container
-          for tag in ${{ steps.set-container-tags.outputs.result }}; do
+          for tag in ${{ steps.set-runner-tags.outputs.result }}; do
             docker tag github-runner-vm:latest $tag
+          done
+          make squid-container
+          for tag in ${{ steps.set-squid-tags.outputs.result }}; do
+            docker tag github-runner-squid:latest $tag
           done
 
       - name: Login to GitHub Container Registry
@@ -57,6 +79,9 @@ jobs:
       - name: Push to registry
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          for tag in ${{ steps.set-container-tags.outputs.result }}; do
+          for tag in ${{ steps.set-runner-tags.outputs.result }}; do
+            docker push $tag
+          done
+          for tag in ${{ steps.set-squid-tags.outputs.result }}; do
             docker push $tag
           done

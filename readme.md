@@ -18,6 +18,14 @@ make container
 
 This will create a tagged container called `github-runner-vm:latest`.
 
+If you also want to build the squid container:
+
+```sh
+make squid-container
+```
+
+...which results in a tagged container called `github-runner-squid:latest`.
+
 ## Running the container
 
 There are a handful of environment variables that are required in order to actually get the runner talking:

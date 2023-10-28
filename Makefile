@@ -46,3 +46,8 @@ container: vm-rootfs $(shell find runner-container -type f)
 		&& { docker rmi github-runner-vm:latest || true ; } \
 		&& docker buildx build --tag github-runner-vm:latest . \
 		&& rm -f vmlinuz initrd vm-rootfs.qcow2.xz
+
+.PHONY: squid-container
+squid-container: $(shell find squid-container -type f)
+	cd squid-container \
+		&& docker build -t github-runner-squid:latest .
