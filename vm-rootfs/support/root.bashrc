@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#set -x
+set -x
 
 # Create a swapfile for larger builds
 fallocate -l 32G /swapfile
@@ -51,7 +51,7 @@ fi
 
 # Download the latest runner binary, so that we're on the latest version
 latest_version=$(git ls-remote --tags https://github.com/actions/runner | cut -d'/' -f 3 | tail -n 1)
-curl -L -o /tmp/runner.tgz https://github.com/actions/runner/releases/download/$latest_version/actions-runner-linux-${RUNNER_ARCH:-x64}-$(echo $latest_version | sed -e 's@^v@@g').tar.gz
+curl -fsSL -o /tmp/runner.tgz https://github.com/actions/runner/releases/download/$latest_version/actions-runner-linux-${RUNNER_ARCH:-x64}-$(echo $latest_version | sed -e 's@^v@@g').tar.gz
 tar xzf /tmp/runner.tgz -C /home/runner
 chown -R runner:runner /home/runner
 rm /tmp/runner.tgz
